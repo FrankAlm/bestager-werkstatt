@@ -17,6 +17,16 @@ Diese Werkstatt hat dir der Bestager-Bauplan angelegt. Hier passiert die Technik
 
 Am einfachsten geht es mit Claude: Lass dir den Text schreiben und sag Claude, dass er ihn in deine Werkstatt legen soll. Die passenden Prompts findest du im Bestager-Bauplan.
 
+## Eine andere Stimme für einen Text
+
+Normalerweise spricht deine Standardstimme, die du in der Startanleitung gewählt hast. Soll ein Text eine andere Stimme bekommen, schreib in die **erste Zeile**:
+
+```
+Stimme: Albrecht
+```
+
+Darunter folgt dein Text. Du kannst den Namen deiner eigenen Stimmklone nehmen oder eine der deutschen HeyGen-Stimmen, zum Beispiel Sabine, Albrecht, Nele, Florian oder Katrin. So spricht zum Beispiel dein Buch mit einer anderen Stimme als deine Kurzvideos.
+
 ## Aussprache anpassen
 
 Spricht deine Stimme ein Wort falsch aus, trag es in **werkzeug/aussprache.txt** ein, zum Beispiel `Bestager = Best Ager`. Deine Texte vertonen sich danach von selbst neu.

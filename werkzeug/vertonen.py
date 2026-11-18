@@ -33,6 +33,40 @@ def sprechtext(text, regeln):
     return text
 
 
+def stimmen():
+    """Eigene Stimmen und deutsche HeyGen-Stimmen, für „Stimme: Name“ in der ersten Zeile."""
+    liste = []
+    for url in ("https://api.heygen.com/v3/models/audio/voices?type=private",
+                "https://api.heygen.com/v3/models/audio/voices?type=public&language=de"):
+        req = urllib.request.Request(url, headers={"X-Api-Key": KEY, "Accept": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                d = json.loads(r.read() or b"{}")
+            liste += d.get("data", []) if isinstance(d.get("data"), list) else []
+        except Exception as e:
+            print("Stimmenliste nicht abrufbar:", e)
+    return liste
+
+
+def stimme_fuer(text, cache):
+    """Erste Zeile „Stimme: Albrecht“ wählt eine andere Stimme für diesen Text."""
+    m = re.match(r"\s*stimme\s*:\s*(.+)", text.split("\n", 1)[0], re.IGNORECASE)
+    if not m:
+        return VOICE, text
+    rest = text.split("\n", 1)[1].strip() if "\n" in text else ""
+    wunsch = m.group(1).strip()
+    if re.fullmatch(r"[A-Za-z0-9_-]{16,64}", wunsch):
+        return wunsch, rest
+    if "liste" not in cache:
+        cache["liste"] = stimmen()
+    for v in cache["liste"]:
+        if str(v.get("name", "")).lower().startswith(wunsch.lower()):
+            print("Stimme für diesen Text:", v.get("name"))
+            return v.get("voice_id"), rest
+    print("Stimme nicht gefunden:", wunsch, "– nehme deine Standardstimme")
+    return VOICE, rest
+
+
 def call(body):
     req = urllib.request.Request("https://api.heygen.com/v3/models/audio/tts", method="POST",
         data=json.dumps(body).encode(),
@@ -65,19 +99,21 @@ def main():
     regeln = aussprache()
     regel_text = AUSSPRACHE.read_text(encoding="utf-8") if AUSSPRACHE.exists() else ""
     fehler = 0
+    cache = {}
     for txt in sorted(TEXTE.glob("*.txt")):
-        text = txt.read_text(encoding="utf-8").strip()
-        if not text:
+        roh = txt.read_text(encoding="utf-8").strip()
+        if not roh:
             continue
-        h = hashlib.sha256((text + VOICE + regel_text).encode()).hexdigest()[:16]
+        h = hashlib.sha256((roh + VOICE + regel_text).encode()).hexdigest()[:16]
         meta = AUDIO / (txt.stem + ".json")
         mp3 = AUDIO / (txt.stem + ".mp3")
         if mp3.exists() and meta.exists() and json.loads(meta.read_text()).get("hash") == h:
             print("unverändert:", txt.name)
             continue
+        stimme, text = stimme_fuer(roh, cache)
         daten, dauer = b"", 0.0
         for teil in stuecke(sprechtext(text, regeln)):
-            st, d = call({"voice_id": VOICE, "text": teil, "model": "heygen-voice-1", "language": "de",
+            st, d = call({"voice_id": stimme, "text": teil, "model": "heygen-voice-1", "language": "de",
                           "output_format": {"encoding": "mp3", "sample_rate_hertz": 44100, "bitrate_bps": 192000}})
             data = d.get("data", d) if isinstance(d, dict) else {}
             if st != 200 or not data.get("audio_url"):
@@ -89,7 +125,7 @@ def main():
             dauer += float(data.get("duration") or 0)
         else:
             mp3.write_bytes(daten)
-            meta.write_text(json.dumps({"hash": h, "sekunden": round(dauer, 1), "zeichen": len(text)}))
+            meta.write_text(json.dumps({"hash": h, "sekunden": round(dauer, 1), "zeichen": len(text), "stimme": stimme}))
             print("fertig:", mp3.name, round(dauer, 1), "Sekunden")
     if fehler:
         sys.exit(1)
