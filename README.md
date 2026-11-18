@@ -17,6 +17,10 @@ Diese Werkstatt hat dir der Bestager-Bauplan angelegt. Hier passiert die Technik
 
 Am einfachsten geht es mit Claude: Lass dir den Text schreiben und sag Claude, dass er ihn in deine Werkstatt legen soll. Die passenden Prompts findest du im Bestager-Bauplan.
 
+## Aussprache anpassen
+
+Spricht deine Stimme ein Wort falsch aus, trag es in **werkzeug/aussprache.txt** ein, zum Beispiel `Bestager = Best Ager`. Deine Texte vertonen sich danach von selbst neu.
+
 ## Deine Schlüssel
 
 Deine Schlüssel für HeyGen, Brevo und deine Kasse liegen verschlüsselt unter **Settings > Secrets and variables > Actions**. Niemand kann sie dort auslesen, auch du nicht. Wenn du einen Schlüssel änderst, trag ihn einfach in der Startanleitung des Bestager-Bauplans neu ein.

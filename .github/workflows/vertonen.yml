@@ -1,7 +1,7 @@
 name: Vertonen
 on:
   push:
-    paths: ['texte/**']
+    paths: ['texte/**', 'werkzeug/aussprache.txt']
   workflow_dispatch:
 permissions:
   contents: write

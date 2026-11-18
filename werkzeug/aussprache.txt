@@ -1,0 +1,4 @@
+# Aussprache: Hier legst du fest, wie deine Stimme bestimmte Wörter sprechen soll.
+# Pro Zeile: Wort = so gesprochen
+# Die Schreibweise in deinen Texten bleibt dabei unverändert.
+Bestager = Best Ager

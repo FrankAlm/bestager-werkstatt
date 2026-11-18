@@ -4,7 +4,7 @@ Läuft automatisch in GitHub, sobald du einen Text in texte/ ablegst oder änder
 Die fertigen MP3-Dateien landen im Ordner audio/.
 Deine Schlüssel liegen als Secrets in dieser Werkstatt (HEYGEN_API_KEY, HEYGEN_VOICE_ID).
 """
-import hashlib, json, os, sys, urllib.error, urllib.request
+import hashlib, json, os, re, sys, urllib.error, urllib.request
 from pathlib import Path
 
 KEY = os.environ.get("HEYGEN_API_KEY", "").strip()
@@ -12,6 +12,25 @@ VOICE = os.environ.get("HEYGEN_VOICE_ID", "").strip()
 ROOT = Path(__file__).resolve().parent.parent
 TEXTE, AUDIO = ROOT / "texte", ROOT / "audio"
 MAX = 9000  # HeyGen nimmt bis 10.000 Zeichen pro Aufruf, wir teilen vorher
+AUSSPRACHE = ROOT / "werkzeug" / "aussprache.txt"
+
+
+def aussprache():
+    """Liest werkzeug/aussprache.txt: pro Zeile „Wort = so gesprochen“."""
+    regeln = []
+    if AUSSPRACHE.exists():
+        for zeile in AUSSPRACHE.read_text(encoding="utf-8").splitlines():
+            if "=" in zeile and not zeile.strip().startswith("#"):
+                wort, gesprochen = (t.strip() for t in zeile.split("=", 1))
+                if wort and gesprochen:
+                    regeln.append((re.compile(r"\b" + re.escape(wort) + r"\b", re.IGNORECASE), gesprochen))
+    return regeln
+
+
+def sprechtext(text, regeln):
+    for muster, gesprochen in regeln:
+        text = muster.sub(gesprochen, text)
+    return text
 
 
 def call(body):
@@ -43,19 +62,21 @@ def main():
         print("Noch keine Schlüssel in der Werkstatt. Verbinde HeyGen in der Startanleitung des Bestager-Bauplans.")
         return
     AUDIO.mkdir(exist_ok=True)
+    regeln = aussprache()
+    regel_text = AUSSPRACHE.read_text(encoding="utf-8") if AUSSPRACHE.exists() else ""
     fehler = 0
     for txt in sorted(TEXTE.glob("*.txt")):
         text = txt.read_text(encoding="utf-8").strip()
         if not text:
             continue
-        h = hashlib.sha256((text + VOICE).encode()).hexdigest()[:16]
+        h = hashlib.sha256((text + VOICE + regel_text).encode()).hexdigest()[:16]
         meta = AUDIO / (txt.stem + ".json")
         mp3 = AUDIO / (txt.stem + ".mp3")
         if mp3.exists() and meta.exists() and json.loads(meta.read_text()).get("hash") == h:
             print("unverändert:", txt.name)
             continue
         daten, dauer = b"", 0.0
-        for teil in stuecke(text):
+        for teil in stuecke(sprechtext(text, regeln)):
             st, d = call({"voice_id": VOICE, "text": teil, "model": "heygen-voice-1", "language": "de",
                           "output_format": {"encoding": "mp3", "sample_rate_hertz": 44100, "bitrate_bps": 192000}})
             data = d.get("data", d) if isinstance(d, dict) else {}
