@@ -1,0 +1,26 @@
+name: Vertonen
+on:
+  push:
+    paths: ['texte/**']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: vertonen
+jobs:
+  vertonen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Texte mit deiner Stimme vertonen
+        env:
+          HEYGEN_API_KEY: ${{ secrets.HEYGEN_API_KEY }}
+          HEYGEN_VOICE_ID: ${{ secrets.HEYGEN_VOICE_ID }}
+        run: python3 werkzeug/vertonen.py
+      - name: Fertige Audios speichern
+        run: |
+          git config user.name "bestager-werkstatt"
+          git config user.email "actions@users.noreply.github.com"
+          git add audio
+          git diff --cached --quiet && exit 0
+          git commit -m "Neue Audios"
+          git pull --rebase -q && git push -q
